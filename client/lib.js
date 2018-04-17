@@ -6,13 +6,13 @@ Impersonate = {
 
 Impersonate.do = function(impersonateUser, cb) {
   if (!cb) cb = function() {};
-  const from = {
+  var from = {
     user: Meteor.userId(),
     token: Accounts._storedLoginToken(),
   }
   Accounts.callLoginMethod({
     methodArguments: [{
-      impersonateUser
+      impersonateUser: impersonateUser,
     }],
     userCallback: function(err) {
       if (err) console.error("Could not impersonate.", err);
@@ -27,7 +27,7 @@ Impersonate.do = function(impersonateUser, cb) {
 
 Impersonate.undo = function(cb) {
   if (!cb) cb = function() {};
-  const to = Impersonate._from.pop();
+  var to = Impersonate._from.pop();
   Accounts.logout(function() {
     Accounts.loginWithToken(to.token, function(err) {
       if (!err) Impersonate._active.set(false);
