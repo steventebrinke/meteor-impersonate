@@ -1,24 +1,26 @@
 'use strict';
 Impersonate = {
-  _from: [],
-  _active: new ReactiveVar(false),
+  FROM_USER_KEY: 'Impersonate.' + Accounts.USER_ID_KEY,
+  FROM_TOKEN_KEY: 'Impersonate.' + Accounts.LOGIN_TOKEN_KEY,
+  isImpersonating: function() { return Meteor._localStorage.getItem(Impersonate.FROM_USER_KEY) != null; },
+  userId: function() { return Meteor._localStorage.getItem(Impersonate.FROM_USER_KEY) || Meteor.userId(); },
 };
 
 Impersonate.do = function(impersonateUser, cb) {
   if (!cb) cb = function() {};
-  var from = {
-    user: Meteor.userId(),
-    token: Accounts._storedLoginToken(),
-  }
+  var fromUser = Meteor.userId();
+  if (!fromUser) throw new Error("Permission denied. You need to be logged in to impersonate users.");
+  var fromToken = Accounts._storedLoginToken();
   Accounts.callLoginMethod({
     methodArguments: [{
       impersonateUser: impersonateUser,
     }],
     userCallback: function(err) {
       if (err) console.error("Could not impersonate.", err);
-      if (!err) {
-        Impersonate._from.push(from);
-        Impersonate._active.set(true);
+      if (!err && Meteor._localStorage.getItem(Impersonate.FROM_USER_KEY) == null) {
+        // Store initial user in local storage allowing us to return to this user
+        Meteor._localStorage.setItem(Impersonate.FROM_USER_KEY, fromUser);
+        Meteor._localStorage.setItem(Impersonate.FROM_TOKEN_KEY, fromToken);
       }
       cb.apply(this, [err, impersonateUser]);
     }
@@ -27,11 +29,14 @@ Impersonate.do = function(impersonateUser, cb) {
 
 Impersonate.undo = function(cb) {
   if (!cb) cb = function() {};
-  var to = Impersonate._from.pop();
+  var toUser = Meteor._localStorage.getItem(Impersonate.FROM_USER_KEY);
+  if (!toUser) throw new Error("Permission denied. You are not impersonating anyone.");
+  var toToken = Meteor._localStorage.getItem(Impersonate.FROM_TOKEN_KEY);
   Accounts.logout(function() {
-    Accounts.loginWithToken(to.token, function(err) {
-      if (!err) Impersonate._active.set(false);
-      cb.apply(this, [err, to.user]);
+    Meteor._localStorage.removeItem(Impersonate.FROM_USER_KEY);
+    Meteor._localStorage.removeItem(Impersonate.FROM_TOKEN_KEY);
+    Accounts.loginWithToken(toToken, function(err) {
+      cb.apply(this, [err, toUser]);
     });
   });
 }
@@ -39,8 +44,8 @@ Impersonate.undo = function(cb) {
 // Reset data on logout
 Meteor.autorun(function() {
   if (Meteor.userId()) return;
-  Impersonate._active.set(false);
-  Impersonate._from = [];
+  Meteor._localStorage.removeItem(Impersonate.FROM_USER_KEY);
+  Meteor._localStorage.removeItem(Impersonate.FROM_TOKEN_KEY);
 });
 
 Template.body.events({
@@ -54,5 +59,5 @@ Template.body.events({
 });
 
 Template.registerHelper("isImpersonating", function () {
-  return Impersonate._active.get();
+  return Impersonate.isImpersonating();
 });
