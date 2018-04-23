@@ -32,12 +32,10 @@ Impersonate.undo = function(cb) {
   var toUser = Meteor._localStorage.getItem(Impersonate.FROM_USER_KEY);
   if (!toUser) throw new Error("Permission denied. You are not impersonating anyone.");
   var toToken = Meteor._localStorage.getItem(Impersonate.FROM_TOKEN_KEY);
-  Accounts.logout(function() {
-    Meteor._localStorage.removeItem(Impersonate.FROM_USER_KEY);
-    Meteor._localStorage.removeItem(Impersonate.FROM_TOKEN_KEY);
-    Accounts.loginWithToken(toToken, function(err) {
-      cb.apply(this, [err, toUser]);
-    });
+  Meteor._localStorage.removeItem(Impersonate.FROM_USER_KEY);
+  Meteor._localStorage.removeItem(Impersonate.FROM_TOKEN_KEY);
+  Accounts.loginWithToken(toToken, function(err) {
+    cb.apply(this, [err, toUser]);
   });
 }
 
