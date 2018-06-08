@@ -47,8 +47,6 @@ Accounts.registerLoginHandler("impersonate", function ({impersonateUser}) {
     return {error: Meteor.Error(404, "User not found. Can't impersonate it.")};
   }
 
-  console.info(`User ${this.userId} now impersonates ${impersonateUser}`);
-
   return {
     userId: impersonateUser,
   };
