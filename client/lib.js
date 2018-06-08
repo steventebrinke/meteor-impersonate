@@ -40,7 +40,7 @@ Impersonate.undo = function(cb) {
 }
 
 // Reset data on logout
-Meteor.autorun(function() {
+Tracker.autorun(function() {
   if (Meteor.userId()) return;
   Meteor._localStorage.removeItem(Impersonate.FROM_USER_KEY);
   Meteor._localStorage.removeItem(Impersonate.FROM_TOKEN_KEY);
